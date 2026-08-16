@@ -123,6 +123,37 @@ async def scan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Scan error {symbol}: {e}")
 
+
+    # Фонове авто-сканування через стандартний asyncio
+async def background_scanner(application: Application):
+    await asyncio.sleep(10) # пауза перед першим запуском
+    while True:
+        if TELEGRAM_CHAT_ID:
+            for symbol in WATCHLIST:
+                try:
+                    signal = analyze_market(symbol)
+                    action = signal.get("action")
+                    score = signal.get("score")
+                    reason = signal.get("reason")
+                    price = signal.get("price")
+
+                    if action in ["BUY", "SELL"]:
+                        trade_result = execute_signal(symbol, action)
+                        msg = (
+                            f"🤖 <b>Auto-Trade Alert</b>\n"
+                            f"<b>Asset:</b> {symbol}\n"
+                            f"<b>Action:</b> {action}\n"
+                            f"<b>Current Price:</b> ${price:.2f}\n"
+                            f"<b>Agent Score:</b> {score}/100\n"
+                            f"<b>Analysis:</b> {reason}\n"
+                            f"<b>Execution:</b> {trade_result}"
+                        )
+                        await application.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=msg, parse_mode="HTML")
+                    await asyncio.sleep(2)
+                except Exception as e:
+                    logger.error(f"Error evaluating {symbol}: {e}")
+        await asyncio.sleep(900) # повторювати кожні 15 хвилин
+
 def main():
     if not TELEGRAM_BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN not found in environment.")
@@ -134,11 +165,9 @@ def main():
     application.add_handler(CommandHandler("portfolio", portfolio_cmd))
     application.add_handler(CommandHandler("scan", scan_cmd))
 
-    # Фоновий веб-сервер та періодичне сканування
     async def post_init(app: Application):
         await start_web_server()
-        if TELEGRAM_CHAT_ID:
-            app.job_queue.run_repeating(auto_scan_and_trade, interval=900, first=10, chat_id=TELEGRAM_CHAT_ID)
+        asyncio.create_task(background_scanner(app))
 
     application.post_init = post_init
 
