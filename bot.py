@@ -21,7 +21,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 WATCHLIST = ["AAPL", "NVDA", "MSFT", "GOOGL", "AMZN"]
 
-# Мікро веб-сервер для проходження Port Scan на Render
+# Micro web server to satisfy Render's port scan
 async def handle_ping(request):
     return web.Response(text="Stock Trading Agent is Live and Running!")
 
@@ -36,7 +36,7 @@ async def start_web_server():
     await site.start()
     logger.info(f"Web server started on port {port}")
 
-# Автоматичне періодичне сканування
+# Automated periodic scanning job
 async def auto_scan_and_trade(context: ContextTypes.DEFAULT_TYPE):
     chat_id = context.job.chat_id
     for symbol in WATCHLIST:
@@ -59,11 +59,11 @@ async def auto_scan_and_trade(context: ContextTypes.DEFAULT_TYPE):
                     f"<b>Execution:</b> {trade_result}"
                 )
                 await context.bot.send_message(chat_id=chat_id, text=msg, parse_mode="HTML")
-            await asyncio.sleep(2)  # пауза, щоб не перевищувати ліміти запитів
+            await asyncio.sleep(2)  # Pause to respect API rate limits
         except Exception as e:
             logger.error(f"Error evaluating {symbol}: {e}")
 
-# Telegram Команди
+# Telegram Command Handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "👋 <b>Welcome to AI Stock Analyst & Trading Agent!</b>\n\n"
@@ -123,10 +123,9 @@ async def scan_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Scan error {symbol}: {e}")
 
-
-    # Фонове авто-сканування через стандартний asyncio
+# Background auto-scanner via standard asyncio loop
 async def background_scanner(application: Application):
-    await asyncio.sleep(10) # пауза перед першим запуском
+    await asyncio.sleep(10)  # Initial delay before first run
     while True:
         if TELEGRAM_CHAT_ID:
             for symbol in WATCHLIST:
@@ -152,7 +151,7 @@ async def background_scanner(application: Application):
                     await asyncio.sleep(2)
                 except Exception as e:
                     logger.error(f"Error evaluating {symbol}: {e}")
-        await asyncio.sleep(900) # повторювати кожні 15 хвилин
+        await asyncio.sleep(900)  # Repeat every 15 minutes
 
 def main():
     if not TELEGRAM_BOT_TOKEN:

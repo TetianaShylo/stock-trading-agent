@@ -7,7 +7,7 @@ from alpaca.trading.enums import OrderSide, TimeInForce
 
 load_dotenv()
 
-# Ініціалізація клієнта Alpaca
+# Initialize Alpaca client
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 
@@ -28,7 +28,7 @@ def analyze_market(ticker_symbol: str) -> dict:
             "price": 0.0,
             "score": 0,
             "action": "HOLD",
-            "reason": f"Не вдалося завантажити дані: {str(e)}"
+            "reason": f"Failed to fetch data: {str(e)}"
         }
 
     company_name = info.get("longName", ticker_symbol)
@@ -42,47 +42,47 @@ def analyze_market(ticker_symbol: str) -> dict:
     max_score = 5
     reasons = []
 
-    # 1. P/E Оцінка
+    # 1. P/E Valuation
     if pe_ratio:
         if pe_ratio < 25:
             score += 1
-            reasons.append(f"✅ Адекватний P/E: {pe_ratio:.2f}")
+            reasons.append(f"✅ Reasonable P/E: {pe_ratio:.2f}")
         else:
-            reasons.append(f"⚠️ Високий P/E: {pe_ratio:.2f}")
+            reasons.append(f"⚠️ High P/E: {pe_ratio:.2f}")
 
-    # 2. Рентабельність
+    # 2. Profitability
     if profit_margins:
         margin_pct = profit_margins * 100
         if margin_pct > 15:
             score += 1
-            reasons.append(f"✅ Маржинальність: {margin_pct:.2f}%")
+            reasons.append(f"✅ Profit Margin: {margin_pct:.2f}%")
         else:
-            reasons.append(f"⚠️ Низька маржинальність: {margin_pct:.2f}%")
+            reasons.append(f"⚠️ Low Profit Margin: {margin_pct:.2f}%")
 
-    # 3. Боргове навантаження
+    # 3. Debt Level
     if debt_to_equity is not None:
         if debt_to_equity < 150:
             score += 1
-            reasons.append(f"✅ Безпечний борг (D/E): {debt_to_equity:.2f}%")
+            reasons.append(f"✅ Healthy Debt (D/E): {debt_to_equity:.2f}%")
         else:
-            reasons.append(f"⚠️ Високий борг (D/E): {debt_to_equity:.2f}%")
+            reasons.append(f"⚠️ High Debt (D/E): {debt_to_equity:.2f}%")
 
-    # 4. Зростання виручки
+    # 4. Revenue Growth
     if revenue_growth is not None:
         growth_pct = revenue_growth * 100
         if growth_pct > 5:
             score += 1
-            reasons.append(f"✅ Зростання виручки: {growth_pct:.2f}%")
+            reasons.append(f"✅ Revenue Growth: {growth_pct:.2f}%")
         else:
-            reasons.append(f"⚠️ Слабке зростання виручки: {growth_pct:.2f}%")
+            reasons.append(f"⚠️ Weak Revenue Growth: {growth_pct:.2f}%")
 
     # 5. Forward P/E vs Trailing P/E
     if forward_pe and pe_ratio:
         if forward_pe < pe_ratio:
             score += 1
-            reasons.append(f"✅ Прогноз прибутку позитивний (Forward P/E {forward_pe:.2f} < {pe_ratio:.2f})")
+            reasons.append(f"✅ Positive Earnings Outlook (Forward P/E {forward_pe:.2f} < {pe_ratio:.2f})")
 
-    # Визначення сигналу дій
+    # Determine action signal
     if score >= 4:
         action = "BUY"
     elif score <= 1:
@@ -96,7 +96,7 @@ def analyze_market(ticker_symbol: str) -> dict:
         "price": float(current_price),
         "score": int((score / max_score) * 100),
         "action": action,
-        "reason": "\n".join(reasons) if reasons else "Дані фундаментального аналізу обмежені."
+        "reason": "\n".join(reasons) if reasons else "Limited fundamental analysis data available."
     }
 
 def execute_signal(symbol: str, action: str, qty: int = 1) -> str:
